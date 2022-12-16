@@ -25,7 +25,7 @@ class ClassicalNaiveBayes:
         counts = X.T.dot(self.u.label2onehot(y)) + self.alpha
         self.phi = counts / counts.sum(axis=0)
 
-    def fit_L2(self, X: csr, y, alpha = 10^-5, l2 = 10^3, weight = False, plot = False):
+    def fit_L2(self, X: csr, y, alpha = 0.000001, l2 = 1000, weight = False, plot = False):
         """
         Updates the model parameters by penalizing the L2 norm of the conditional probabilities
             X: sparse matrix of shape [n_samples, n_features]
@@ -35,18 +35,25 @@ class ClassicalNaiveBayes:
             weight: whether to weight the conditional probabilities
             plot: whether to plot the log likelihood
         """
-        if self.phi is None:
-            print('No prior phi found, first fit the model')
+        # Fit the model
         self.fit(X, y)
 
-        phi_l2, likelihood = self.u.gradient_ascent(X, self.u.label2onehot(y), self.phi, alpha, l2)
+        print(f'Starting gradient ascent with alpha = {alpha} and l2 = {l2}')
+        phi_l2, likelihood = self.u.gradient_ascent(
+            X = X, y = self.u.label2onehot(y), 
+            phi = self.phi, 
+            alpha = alpha, 
+            l2 = l2, 
+            max_iter = 100, 
+            tol = 1e-4)
+
         self.phi = phi_l2
 
-        if weight:
-            self.fit_weighted(X, y)
-        
-        if plot:
-            pd.Series(likelihood).plot()
+        # Modifications
+        self.fit_weighted(X, y)      if weight else None
+
+        # Plotting for inspection
+        pd.Series(likelihood).plot() if plot else None
 
         
     def fit_weighted(self):
@@ -108,11 +115,11 @@ class Utils:
     @staticmethod
     def log_likelihood(X, y_onehot, phi, l2):
         """
-        X: sparse matrix of shape (n_samples, n_features)
-        y: array of shape (n_samples,)
-        phi: array of shape (n_features, n_classes)
-        prior: array of shape (n_classes,)
-        alpha: float
+        X: sparse feature matrix of shape (n_samples, n_features)
+        y: target array of shape (n_samples,)
+        phi: parameter array of shape (n_features, n_classes)
+        prior: prior probability array of shape (n_classes,)
+        alpha: learning rate
         l2: L2 regularization parameter
         """
 
@@ -123,11 +130,11 @@ class Utils:
     @staticmethod
     def update_phi(X, y, phi, alpha, l2):
         """
-        X: sparse matrix of shape (n_samples, n_features)
-        y: array of shape (n_samples,)
-        phi: array of shape (n_features, n_classes)
-        prior: array of shape (n_classes,)
-        alpha: float
+        X: sparse feature matrix of shape (n_samples, n_features)
+        y: target array of shape (n_samples,)
+        phi: parameter array of shape (n_features, n_classes)
+        prior: prior probability array of shape (n_classes,)
+        alpha: learning rate
         l1: L1 regularization parameter
         """
 
@@ -144,7 +151,6 @@ class Utils:
         return phi
 
 
-    @classmethod
     def gradient_ascent(self, X, y, phi, alpha=10^-6, l2=1000, max_iter=100, tol=1e-4):
         """
         X: sparse matrix of shape (n_samples, n_features)
@@ -153,8 +159,8 @@ class Utils:
         prior: array of shape (n_classes,)
         alpha: float
         l1: L1 regularization parameter
-        max_iter: int
-        tol: float
+        max_iter: Maximum number of iterations
+        tol: Tolerance in absolute difference of log likelihoods
         """
 
         log_likelihoods = []
@@ -200,17 +206,9 @@ if __name__ == '__main__':
     print('Train accuracy: \t', cnbc.score(X_train, y_train))
     print('Test accuracy: \t', cnbc.score(X_test, y_test))
 
-    cnbc.fit_L2(X_train, y_train)
+    cnbc.fit_L2(X_train, y_train, plot=True)
 
     # predict
     print('For L2 Regularized Naive Bayes')
     print('Train accuracy: \t', cnbc.score(X_train, y_train))
     print('Test accuracy: \t\t', cnbc.score(X_test, y_test))
-
-    cnbc.fit_weighted()
-
-    # predict
-    print('For Weighted L2 Regularized Naive Bayes')
-    print('Train accuracy: \t', cnbc.score(X_train, y_train))
-    print('Test accuracy: \t\t', cnbc.score(X_test, y_test))
-
