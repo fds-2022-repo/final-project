@@ -14,7 +14,7 @@ class ClassicalNaiveBayes:
         self.classes = None
         self.u = Utils()
 
-    def fit(self, X: csr, y):
+    def fit(self, X: csr, y, weight = False):
         """
         Fits the model by calculating the prior and the conditional probabilities
             X: sparse matrix of shape [n_samples, n_features]
@@ -24,6 +24,9 @@ class ClassicalNaiveBayes:
         self.prior = self.u.label2onehot(y).sum(axis=0) / self.u.label2onehot(y).sum()
         counts = X.T.dot(self.u.label2onehot(y)) + self.alpha
         self.phi = counts / counts.sum(axis=0)
+
+        # Modifications
+        self.fit_weighted() if weight else None
 
     def fit_L2(self, X: csr, y, alpha = 0.000001, l2 = 1000, weight = False, plot = False):
         """
@@ -38,7 +41,7 @@ class ClassicalNaiveBayes:
         # Fit the model
         self.fit(X, y)
 
-        print(f'Starting gradient ascent with alpha = {alpha} and l2 = {l2}')
+        # print(f'Starting gradient ascent with alpha = {alpha} and l2 = {l2}')
         phi_l2, likelihood = self.u.gradient_ascent(
             X = X, y = self.u.label2onehot(y), 
             phi = self.phi, 
@@ -50,7 +53,7 @@ class ClassicalNaiveBayes:
         self.phi = phi_l2
 
         # Modifications
-        self.fit_weighted(X, y)      if weight else None
+        self.fit_weighted() if weight else None
 
         # Plotting for inspection
         pd.Series(likelihood).plot() if plot else None
